@@ -26,7 +26,7 @@ int create_window(int argc, char *argv[]){
    gtk_box_pack_start(GTK_BOX(p_main_box), p_button[0], FALSE, FALSE, 0);
    // get data from entry
    gtk_entry_get_text(GTK_ENTRY(p_entry));
-
+   
    gtk_widget_show_all(p_window);
 }
 

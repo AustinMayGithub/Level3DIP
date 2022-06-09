@@ -2,21 +2,36 @@
 // requires libpqxx version 7.7.3 or later
 
 #include <iostream>
-#include <pqxx/pqxx> 
+
 #include <string.h>
 // include the gtk headers
+#include <gtk/gtk.h>
 
 
 //ask for user name, password, and database name
 // open login screen
 // if login successful, open main window
 // if login unsuccessful, display error message
-// if user clicks "cancel", close program
+// if user clicks "cancel", close progray
+
+
+static GtkTreeModel *
+
 
 
 char login_string(255);
 using namespace std;
 using namespace pqxx;
+
+string space2underscore(string text)
+{
+    for(int i = 0; i < text.length(); i++)
+    {
+        if(text[i] == ' ')
+            text[i] = '_';
+    }
+    return text;
+}
 
 int main(int argc, char* argv[]) {
    string user;
@@ -69,7 +84,7 @@ int main(int argc, char* argv[]) {
             cout<<"Enter item quantity: ";
             cin>>quantity;
 
-            
+            description = space2underscore(description);
             W.exec("INSERT INTO items (name, category, description, price, quantity) VALUES ('"+name+"', '"+category+"', '"+description+"', '"+price+"', '"+quantity+"');");
             W.commit();
             //wait for user to press enter
@@ -97,6 +112,7 @@ int main(int argc, char* argv[]) {
             cin>>category;
             cout<<"Enter item description: ";
             cin>>description;
+            cin.get();
             cout<<"Enter item price: ";
             cin>>price;
             cout<<"Enter item quantity: ";
@@ -126,8 +142,22 @@ int main(int argc, char* argv[]) {
             cin.get();
             cin.get();
          } else if (choice == 5) {
-            result R(W.exec("SELECT * FROM items;"));
-            W.commit();
+            
+            gtk_init (&argc, &argv);
+
+            GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+            g_signal_connect (window, "destroy", gtk_main_quit, NULL);
+
+            GtkWidget *view = create_view_and_model ();
+
+            gtk_container_add (GTK_CONTAINER (window), view);
+
+            gtk_widget_show_all (window);
+
+            gtk_main ();
+
+            return 0;
+            
             if (R.size() == 0) {
                cout<<"No items found"<<endl;
                //wait for user to press enter

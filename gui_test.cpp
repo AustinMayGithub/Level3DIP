@@ -1,5 +1,6 @@
 #include <gtk/gtk.h>
 // include gtk extra
+#include <pqxx/pqxx> 
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -119,7 +120,7 @@ static void add( GtkWidget *widget, gpointer data)
   gtk_grid_attach(GTK_GRID(add_grid), add_item_quantity_entry1, 1, 4, 1, 1);
   gtk_widget_show(add_item_quantity_entry1);
 
-
+x
 }
 
 static void
@@ -158,9 +159,11 @@ activate (GtkApplication *app,
   gtk_grid_attach(GTK_GRID(grid), delete_button, 1, 0, 1, 1);
   gtk_widget_show(delete_button);
   GtkWidget *update_button;
+  
   update_button = gtk_button_new_with_label("Update Item");
   gtk_grid_attach(GTK_GRID(grid), update_button, 2, 0, 1, 1);
   gtk_widget_show(update_button);
+
   GtkWidget *search_button;
   search_button = gtk_button_new_with_label("Search Item");
   gtk_grid_attach(GTK_GRID(grid), search_button, 3, 0, 1, 1);

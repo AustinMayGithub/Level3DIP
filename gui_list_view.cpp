@@ -16,12 +16,12 @@ int i;
 int login (){
   ifstream in("data.dmf");
   in >> login_string;
-  printf("%s", login_string);
-  connection C(login_string);
+  const char *lchr = login_string.c_str();
+  printf("%s", lchr);
+  connection C(lchr);
   
   return 0;
 }
-connection C("dbname=testdb user=postgres password=Austin12! host=127.0.0.1 port=5432");
 enum
 {
   COL_ID = 0,
@@ -36,6 +36,14 @@ enum
 static GtkTreeModel *
 create_and_fill_model (void)
 {
+  ifstream in("data.dmf");
+  in >> login_string;
+  const char *lchr = login_string.c_str();
+  printf("%s", lchr);
+  lchr = "dbname=testdb user=postgres password=Austin12! host=127.0.0.1 port=5432";
+  connection C(lchr);
+  
+
   GtkListStore *store = gtk_list_store_new (NUM_COLS,
                       G_TYPE_STRING,
 											G_TYPE_STRING,
@@ -67,6 +75,11 @@ create_and_fill_model (void)
     
   return GTK_TREE_MODEL (store);
   
+}
+static void
+exit (void)
+{
+  gtk_main_quit ();
 }
 
 
@@ -101,7 +114,11 @@ create_view_and_model (void)
 
 
 int main(int argc, char* argv[]) {
-   login();
+  ifstream in("data.dmf");
+  in >> login_string;
+  const char *lchr = login_string.c_str();
+  printf("%s", lchr);
+  connection C(lchr);
    // connect to the database, otherwise throw an error
    if (C.is_open()) {
       cout << "Connection Successful, connected to: " << C.dbname() << endl;
@@ -115,15 +132,31 @@ int main(int argc, char* argv[]) {
   g_signal_connect (window, "destroy", gtk_main_quit, NULL);
 
   GtkWidget *view = create_view_and_model ();
+  // make 4 buttons on the left side of the window
+  GtkWidget *button1 = gtk_button_new_with_label ("Add Item");
+  GtkWidget *button2 = gtk_button_new_with_label ("Remove Item");
+  GtkWidget *button3 = gtk_button_new_with_label ("Update Item");
+  GtkWidget *button4 = gtk_button_new_with_label ("Exit");
+  // make a grid to hold the buttons
+  GtkWidget *grid;
+  grid = gtk_grid_new();
+  gtk_grid_attach(GTK_GRID(grid), button1, 0, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), button2, 0, 1, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), button3, 0, 2, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), button4, 0, 3, 1, 1);
+  g_signal_connect(button4, "clicked", G_CALLBACK(exit), NULL);
+  // add the tree view to the grid and make it fill the entire window except for the buttons
+  
+
   // add scroll bar to the window
   GtkWidget *scrolled_window = gtk_scrolled_window_new (NULL, NULL);
   // make the window scrollable
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_container_add (GTK_CONTAINER (scrolled_window), view);
-  gtk_container_add (GTK_CONTAINER (window), scrolled_window);
+  gtk_grid_attach(GTK_GRID(grid), scrolled_window, 1, 0, 9, 4);
+  gtk_container_add (GTK_CONTAINER (window), grid);
   // set smallest window size
   gtk_window_set_default_size (GTK_WINDOW (window), 300, 300);
-
 
   gtk_widget_show_all (window);
 

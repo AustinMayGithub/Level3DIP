@@ -7,6 +7,7 @@
 
 GtkWidget *id_entry;
 GtkWidget *name_entry;
+GtkWidget *cat_entry;
 GtkWidget *description_entry;
 GtkWidget *price_entry;
 GtkWidget *quantity_entry;
@@ -31,6 +32,7 @@ enum
 {
   COL_ID = 0,
   COL_NAME,
+  COL_CAT,
   COL_DESCRIPTION,
   COL_PRICE,
   COL_QUANTITY,
@@ -47,22 +49,21 @@ create_and_fill_model (void)
   printf("%s", lchr);
   lchr = "dbname=testdb user=postgres password=Austin12! host=127.0.0.1 port=5432";
   connection C(lchr);
-  
 
   GtkListStore *store = gtk_list_store_new (NUM_COLS,
+                      G_TYPE_STRING,
                       G_TYPE_STRING,
 											G_TYPE_STRING,
 											G_TYPE_STRING,
 											G_TYPE_STRING,
 											G_TYPE_STRING);
 
-  /* Append a row and fill in some data */
   cout<<"it gets here";
   GtkTreeIter iter;
   gtk_list_store_append (store, &iter);
   // fill the row with data from the database using the sql query select command
   work W(C); 
-  string query = "select * from items";
+  string query = "select * from inventory";
   cout<<"it gets here";
   result R( W.exec(query));
   // iterate through the items and add them to the database 
@@ -71,9 +72,10 @@ create_and_fill_model (void)
     gtk_list_store_set (store, &iter,
               COL_ID, c[0].c_str(),
               COL_NAME, c[1].c_str(),
-              COL_DESCRIPTION, c[2].c_str(),
-              COL_PRICE, c[3].c_str(),
-              COL_QUANTITY, c[4].c_str(),
+              COL_CAT, c[2].c_str(),
+              COL_DESCRIPTION, c[3].c_str(),
+              COL_PRICE, c[4].c_str(),
+              COL_QUANTITY, c[5].c_str(),
               -1);
     gtk_list_store_append (store, &iter);
     }
@@ -118,6 +120,8 @@ create_view_and_model (void)
   renderer = gtk_cell_renderer_text_new ();
   gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Name",  renderer, "text", COL_NAME,NULL);
   renderer = gtk_cell_renderer_text_new ();
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Category",  renderer, "text", COL_CAT,NULL);
+  renderer = gtk_cell_renderer_text_new ();
   gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Description",  renderer, "text", COL_DESCRIPTION,NULL);
   renderer = gtk_cell_renderer_text_new ();
   gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Price",  renderer, "text", COL_PRICE,NULL);
@@ -142,13 +146,14 @@ on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *c
   GtkTreeIter iter;
   gchar *id;
   gchar *name;
+  gchar *cat;
   gchar *description;
   gchar *price;
   gchar *quantity;
   model = gtk_tree_view_get_model (treeview);
   gtk_tree_model_get_iter (model, &iter, path);
-  gtk_tree_model_get (model, &iter,COL_ID, &id, COL_NAME, &name, COL_DESCRIPTION, &description, COL_PRICE, &price, COL_QUANTITY, &quantity, -1);
-  printf ("Selected: %s, %s, %s, %s, %s\n", id, name, description, price, quantity);
+  gtk_tree_model_get (model, &iter,COL_ID, &id, COL_NAME, &name, COL_CAT, &cat, COL_DESCRIPTION, &description, COL_PRICE, &price, COL_QUANTITY, &quantity, -1);
+  printf ("Selected: %s, %s, %s, %s, %s\n", id, name, cat, description, price, quantity);
   // make a new window that shows details about the item and allow the user to edit it or delete it
   GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (window), "Item Details");
@@ -159,12 +164,14 @@ on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *c
   // add entries for the new item
   id_entry = gtk_entry_new();
   name_entry = gtk_entry_new();
+  cat_entry = gtk_entry_new();
   description_entry = gtk_entry_new();
   price_entry = gtk_entry_new();
   quantity_entry = gtk_entry_new();
 
   gtk_entry_set_text (GTK_ENTRY (id_entry), id);
   gtk_entry_set_text (GTK_ENTRY (name_entry), name);
+  gtk_entry_set_text (GTK_ENTRY (cat_entry), cat);
   gtk_entry_set_text (GTK_ENTRY (description_entry), description);
   gtk_entry_set_text (GTK_ENTRY (price_entry), price);
   gtk_entry_set_text (GTK_ENTRY (quantity_entry), quantity);
@@ -178,18 +185,20 @@ on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *c
   gtk_grid_attach (GTK_GRID (grid), id_entry, 1, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Name"), 0, 1, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), name_entry, 1, 1, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Description"), 0, 2, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), description_entry, 1, 2, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Price"), 0, 3, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), price_entry, 1, 3, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Quantity"), 0, 4, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), quantity_entry, 1, 4, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Category"), 0, 2, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), cat_entry, 1, 2, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Description"), 0, 3, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), description_entry, 1, 3, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Price"), 0, 4, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), price_entry, 1, 4, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Quantity"), 0, 5, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), quantity_entry, 1, 5, 1, 1);
   // add a button to save the changes
   GtkWidget *save_button = gtk_button_new_with_label ("Save");
-  gtk_grid_attach (GTK_GRID (grid), save_button, 1, 5, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), save_button, 1, 6, 1, 1);
   // add a button to delete the item
   GtkWidget *delete_button = gtk_button_new_with_label ("Delete");
-  gtk_grid_attach (GTK_GRID (grid), delete_button, 1, 6, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), delete_button, 1, 7, 1, 1);
   // connect the signals to the buttons
   gtk_widget_show_all (window);
 
@@ -246,7 +255,7 @@ int main(int argc, char* argv[]) {
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_container_add (GTK_CONTAINER (scrolled_window), view);
   // make sure that the tree view is the size of the window
-  gtk_widget_set_size_request (scrolled_window, 450, 600);
+  gtk_widget_set_size_request (scrolled_window, 500, 600);
   gtk_grid_attach(GTK_GRID(grid), scrolled_window, 0, 4, 5, 4);
   // get the value of the item that is selected in the tree view
   g_signal_connect (view, "row-activated", G_CALLBACK (on_row_activated), NULL);

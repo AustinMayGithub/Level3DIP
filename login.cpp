@@ -31,16 +31,18 @@ save_info (GtkWidget *widget,
   ofstream out("data.dmf");
   out << "dbname=" << database << " user=" << username << " password=" << password << " host=" << ip << " port=" << port;
   out.close();
-  system("./main");
   gtk_main_quit();
+  system("./main");
+  
 }
 
 static void
 login (GtkWidget *widget,
              gpointer   data)
 {
-  system("./main");
+  
   gtk_main_quit();
+  system("./main");
 }
 
 static void

@@ -4,7 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
-
+const char *lchr;
+gchar *id;
 GtkWidget *id_entry;
 GtkWidget *name_entry;
 GtkWidget *cat_entry;
@@ -22,7 +23,7 @@ int i;
 int login (){
   ifstream in("data.dmf");
   in >> login_string;
-  const char *lchr = login_string.c_str();
+  lchr = login_string.c_str();
   printf("%s", lchr);
   connection C(lchr);
   
@@ -101,6 +102,7 @@ add_item (void)
   gtk_window_set_resizable (GTK_WINDOW (window), FALSE);
   gtk_window_set_modal (GTK_WINDOW (window), TRUE);
 
+  gtk_widget_show_all (window);
   // add entries for the new item
   return 0;
 }
@@ -138,13 +140,32 @@ create_view_and_model (void)
 
   return view;
 }
+// update the item in the database
+static void
+update_data (void) {
+  // commit the data to the database
+  lchr = "dbname=testdb user=postgres password=Austin12! host=127.0.0.1 port=5432";
+  connection C(lchr);
+  work W(C);
+  string query = "update inventory set id = '" + string(gtk_entry_get_text(GTK_ENTRY(id_entry)))+ "', name = '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', category = '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', description = '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', price = '" + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + "', quantity = '" + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) + "' where id = '" + id + "'";
+  printf("%s", query.c_str());
+  W.exec(query);
+  W.commit();
+  //reload the data from the database
+  GtkTreeModel *model = create_and_fill_model ();
+  gtk_tree_view_set_model (GTK_TREE_VIEW (view), model);
+  g_object_unref (model);
+
+}
+
+
 // get the currently selected row
 static void
 on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data)
 {
   GtkTreeModel *model;
   GtkTreeIter iter;
-  gchar *id;
+
   gchar *name;
   gchar *cat;
   gchar *description;
@@ -196,14 +217,12 @@ on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *c
   // add a button to save the changes
   GtkWidget *save_button = gtk_button_new_with_label ("Save");
   gtk_grid_attach (GTK_GRID (grid), save_button, 1, 6, 1, 1);
+  g_signal_connect (save_button, "clicked", G_CALLBACK (update_data), NULL);
   // add a button to delete the item
   GtkWidget *delete_button = gtk_button_new_with_label ("Delete");
   gtk_grid_attach (GTK_GRID (grid), delete_button, 1, 7, 1, 1);
   // connect the signals to the buttons
   gtk_widget_show_all (window);
-
-
-
 
 }
 
@@ -229,7 +248,7 @@ int main(int argc, char* argv[]) {
   GtkWidget *view = create_view_and_model ();
   // make four buttons along the top edge of the screen 
   GtkWidget *button1 = gtk_button_new_with_label ("Add Item");
-  GtkWidget *button2 = gtk_button_new_with_label ("Remove Item");
+  GtkWidget *button2 = gtk_button_new_with_label ("Sort Items");
   GtkWidget *button3 = gtk_button_new_with_label ("Update Item");
   GtkWidget *button4 = gtk_button_new_with_label ("Search Item");
   GtkWidget *button5 = gtk_button_new_with_label ("Exit");
@@ -271,3 +290,7 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
+
+
+
+

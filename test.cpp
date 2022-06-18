@@ -8,8 +8,9 @@ const char *password;
 const char *database;
 const char *ip;
 const char *port;
-int i; 
+
 using namespace std;
+int i; 
 map<int, string>  data;
 ifstream in("data.dmf");
 string line;

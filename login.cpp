@@ -29,7 +29,7 @@ save_info (GtkWidget *widget,
   ip = gtk_entry_get_text(GTK_ENTRY(ip_entry));
   port = gtk_entry_get_text(GTK_ENTRY(port_entry));
   ofstream out("data.dmf");
-  out << "dbname=" << database << " user=" << username << " password=" << password << " host=" << ip << " port=" << port;
+  out << "dbname=" << database << ",user=" << username << ",password=" << password << ",host=" << ip << ",port=" << port;
   out.close();
   gtk_main_quit();
   system("./main");

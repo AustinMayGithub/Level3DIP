@@ -5,15 +5,22 @@
 #include <fstream>
 #include <string.h>
 
-gchar *id;
+
+GtkCellRenderer *renderer;
 GtkWidget *search_box;
 GtkWidget *id_entry;
 GtkWidget *name_entry;
 GtkWidget *cat_entry;
+GtkWidget *filter_entry;
 GtkWidget *description_entry;
 GtkWidget *price_entry;
 GtkWidget *quantity_entry;
 GtkWidget *update_item;
+GtkWidget *view;
+GtkWidget *add_window;
+GtkWidget *main_window;
+GtkWidget *filter_window;
+
 gchar *name;
 gchar *cat;
 gchar *description;
@@ -24,9 +31,16 @@ gchar *quantity;
 using namespace std;
 
 using namespace pqxx;
+
+
+
+
 string login_string;
 const char* convertchar;
 char *lchr;
+string category_filter;
+string id;
+
 
 int i; 
 int login (){
@@ -34,6 +48,7 @@ int login (){
   in >> login_string;
   convertchar = login_string.c_str();
   lchr = strdup(convertchar);
+  category_filter = "*";
   // replace all commas with spaces
   for (int i = 0; i < strlen(lchr); i++) {
 	if (lchr[i] == ',') {
@@ -45,9 +60,10 @@ int login (){
   
   return 0;
 }
+string query_main = "select * from inventory";
 enum
 {
-  COL_ID = 0,
+  COL_ID,
   COL_NAME,
   COL_CAT,
   COL_DESCRIPTION,
@@ -56,30 +72,47 @@ enum
   NUM_COLS
 } ;
 
+GtkListStore *store = gtk_list_store_new (NUM_COLS,
+                    G_TYPE_STRING,
+                    G_TYPE_STRING,
+										G_TYPE_STRING,
+										G_TYPE_STRING,
+										G_TYPE_STRING,
+										G_TYPE_STRING);
+
+static void
+exit (void)
+{
+  gtk_main_quit ();
+}
+
+// create a table
+static void 
+create (void) {
+  connection C(lchr);
+  work W(C);
+
+  string query = "create table inventory (id text primary key, name text, category text, description text, price decimal, quantity int);";
+  W.exec(query);
+  W.commit();
+
+}
+
 
 static GtkTreeModel *
 create_and_fill_model (void)
 {
   connection C(lchr);
 
-  GtkListStore *store = gtk_list_store_new (NUM_COLS,
-                      G_TYPE_STRING,
-                      G_TYPE_STRING,
-											G_TYPE_STRING,
-											G_TYPE_STRING,
-											G_TYPE_STRING,
-											G_TYPE_STRING);
 
-  cout<<"it gets here";
   GtkTreeIter iter;
   gtk_list_store_append (store, &iter);
   // fill the row with data from the database using the sql query select command
   work W(C); 
-  string query = "select * from inventory";
-  cout<<"it gets here";
-  result R( W.exec(query));
-  // iterate through the items and add them to the database 
-  for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+  try {
+    
+    result R(W.exec(query_main));
+    for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
     
     gtk_list_store_set (store, &iter,
               COL_ID, c[0].c_str(),
@@ -91,37 +124,51 @@ create_and_fill_model (void)
               -1);
     gtk_list_store_append (store, &iter);
     }
-    // add a filter to the list view
-    
-  return GTK_TREE_MODEL (store);
-  
+
+    return GTK_TREE_MODEL (store);
+  } catch (pqxx::undefined_table) {
+    printf("NO TABLE DETECTED");
+    // show error message if the table does not exist and ask the user to create it
+    GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title (GTK_WINDOW (window), "Error");
+    gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
+    gtk_window_set_position (GTK_WINDOW (window), GTK_WIN_POS_CENTER);
+    gtk_container_set_border_width (GTK_CONTAINER (window), 10);
+    GtkWidget *label = gtk_label_new ("Table does not exist. It must be created to use this program");
+    GtkWidget *label2 = gtk_label_new ("Would you like DataManage to create this table for you?");
+    // make a button labeled create and exit
+    GtkWidget *create_button = gtk_button_new_with_label ("Create Table");
+    g_signal_connect (create_button, "clicked", G_CALLBACK (create), NULL);
+
+    GtkWidget *exit_button = gtk_button_new_with_label ("Exit");
+    g_signal_connect (create_button, "clicked", G_CALLBACK (exit), NULL);
+
+    GtkWidget *grid = gtk_grid_new ();
+    gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
+    gtk_grid_set_row_spacing (GTK_GRID (grid), 10);
+    gtk_container_add (GTK_CONTAINER (window), grid);
+
+    gtk_grid_attach (GTK_GRID (grid), label, 0, 1, 1, 1);
+    gtk_grid_attach (GTK_GRID (grid), label2, 0, 2, 1, 1);
+    gtk_grid_attach (GTK_GRID (grid), create_button, 0, 1, 1, 1);
+    gtk_grid_attach (GTK_GRID (grid), exit_button, 0, 1, 1, 1);
+
+
+  }
+  return 0;
 }
-static void
-exit (void)
-{
-  gtk_main_quit ();
-}
+
 // commit data to the database
-static void
-commit_data (void)
-{
- 
-  connection C(lchr);
-  work W(C); 
-  string query = "insert into inventory values ("+ string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + ", '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', " + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", " + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) +")";
-  W.exec(query);
-  W.commit();
-}
 
 
 
 static GtkWidget *
 create_view_and_model (void)
 {
-  GtkWidget *view = gtk_tree_view_new ();
+  view = gtk_tree_view_new ();
   // create the model and add it to the view
   // populate the cells with the column data
-  GtkCellRenderer *renderer;
+  
   renderer = gtk_cell_renderer_text_new ();
   gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "ID",  renderer, "text", COL_ID,NULL);
   renderer = gtk_cell_renderer_text_new ();
@@ -136,6 +183,8 @@ create_view_and_model (void)
   gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Quantity",  renderer, "text", COL_QUANTITY,NULL);
 
   // load the database data into the tree view
+  // clear the tree view first
+  gtk_list_store_clear (store);
   GtkTreeModel *model = create_and_fill_model ();
 
    
@@ -144,17 +193,54 @@ create_view_and_model (void)
   g_object_unref (model);
 
   return view;
+
+
 }
+
+static void
+commit_data (void)
+{
+  try {
+    connection C(lchr);
+    work W(C); 
+    string query = "insert into inventory values ('"+ string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', " + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", " + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) +")";
+    W.exec(query);
+    W.commit();
+    id = "";
+    // destroy the window
+    gtk_widget_destroy (add_window);
+    // reload the tree view
+    GtkWidget *view = create_view_and_model ();
+
+    gtk_widget_grab_focus (search_box);
+    // make sure that the tree view is the size of the window
+  }
+  catch (const std::exception &e) {
+    // show the error message
+    GtkWidget *dialog = gtk_message_dialog_new (NULL,
+                                                GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                GTK_MESSAGE_ERROR,
+                                                GTK_BUTTONS_CLOSE,
+                                                "%s", e.what());
+    gtk_dialog_run (GTK_DIALOG (dialog));
+  }
+}
+
 static void 
 delete_data (void) {
   // remove the selected item from the database
-  printf("%s", lchr);
   connection C(lchr);
   work W(C);
-  string query = "delete from inventory where id = ";
-  query += id;
+  string query = "delete from inventory where id = '" + string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "'";
   W.exec(query);
   W.commit();
+  // destroy the window
+  gtk_widget_destroy (update_item);
+  // reload the model and let the view know we changed the model
+  // clear the list store
+  GtkWidget *view = create_view_and_model ();
+
+  gtk_widget_grab_focus (search_box);
 }
 // update the item in the database
 static void
@@ -163,11 +249,10 @@ update_data (void) {
   connection C(lchr);
   work W(C);
   // check if id is in the database
-  string query = "select * from inventory where id = ";
-  query += id;
-  result R( W.exec(query));
   try {
-    string query = "update inventory set id = " + string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + ", name = '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', category = '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', description = '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', price = " + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", quantity = " + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) + " where id = '" + id + "'";
+    printf("%s\n", id.c_str());
+    string query = "update inventory set id = '" + string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "', name = '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', category = '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', description = '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', price = " + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", quantity = " + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) + " where id = '" + id.c_str() + "'";
+    printf("%s\n", query.c_str());
     W.exec(query);
     W.commit();
   } catch (pqxx::sql_error const &e) {
@@ -179,6 +264,9 @@ update_data (void) {
     gtk_widget_show (dialog);
     
     }
+  gtk_widget_destroy (update_item);
+  GtkWidget *view = create_view_and_model ();
+  gtk_widget_grab_focus (search_box);
     
   }
 
@@ -186,11 +274,11 @@ static GtkWidget *
 add_item (void) {
   
   // add the item to the database
-  GtkWidget *add_item = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title (GTK_WINDOW (add_item), "Add Item");
-  gtk_window_set_default_size (GTK_WINDOW (add_item), 200, 200);
-  gtk_container_set_border_width (GTK_CONTAINER (add_item), 10);
-  gtk_window_set_position (GTK_WINDOW (add_item), GTK_WIN_POS_CENTER);
+  add_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_title (GTK_WINDOW (add_window), "Add Item");
+  gtk_window_set_default_size (GTK_WINDOW (add_window), 200, 200);
+  gtk_container_set_border_width (GTK_CONTAINER (add_window), 10);
+  gtk_window_set_position (GTK_WINDOW (add_window), GTK_WIN_POS_CENTER);
 
   // add entries for the new item
   id_entry = gtk_entry_new();
@@ -200,20 +288,17 @@ add_item (void) {
   price_entry = gtk_entry_new();
   quantity_entry = gtk_entry_new();
 
-  gtk_entry_set_text (GTK_ENTRY (id_entry), id);
-  gtk_entry_set_text (GTK_ENTRY (name_entry), name);
-  gtk_entry_set_text (GTK_ENTRY (cat_entry), cat);
-  gtk_entry_set_text (GTK_ENTRY (description_entry), description);
-  gtk_entry_set_text (GTK_ENTRY (price_entry), price);
-  gtk_entry_set_text (GTK_ENTRY (quantity_entry), quantity);
+  gtk_entry_set_text (GTK_ENTRY (id_entry), id.c_str());
   // make a grid to hold the entries  
   GtkWidget *grid = gtk_grid_new ();
   gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
   gtk_grid_set_row_spacing (GTK_GRID (grid), 10);
-  gtk_container_add (GTK_CONTAINER (add_item), grid);
+  gtk_container_add (GTK_CONTAINER (add_window), grid);
   // add the entries to the grid
   gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("ID"), 0, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), id_entry, 1, 0, 1, 1);
+  // prefill the id entry with the next available id
+  gtk_entry_set_text (GTK_ENTRY (id_entry), id.c_str());
   gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Name"), 0, 1, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), name_entry, 1, 1, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Category"), 0, 2, 1, 1);
@@ -230,40 +315,37 @@ add_item (void) {
   g_signal_connect (save_button, "clicked", G_CALLBACK (commit_data), NULL);
   // add a button to delete the item
   // connect the signals to the buttons
-  gtk_widget_show_all (add_item);
+  gtk_widget_show_all (add_window);
+  return 0;
 }
-
-// get the currently selected row
+// search the database for the item
 static void
-on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data)
-{
-  GtkTreeModel *model;
-  GtkTreeIter iter;
-  model = gtk_tree_view_get_model (treeview);
-  gtk_tree_model_get_iter (model, &iter, path);
-  gtk_tree_model_get (model, &iter,COL_ID, &id, COL_NAME, &name, COL_CAT, &cat, COL_DESCRIPTION, &description, COL_PRICE, &price, COL_QUANTITY, &quantity, -1);
-  printf ("Selected: %s, %s, %s, %s, %s\n", id, name, cat, description, price, quantity);
-  // make a new window that shows details about the item and allow the user to edit it or delete it
-  GtkWidget *update_item = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+update (string id) {
+  // update the item in the database
+  update_item = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (update_item), "Item Details");
   gtk_window_set_default_size (GTK_WINDOW (update_item), 200, 200);
   gtk_container_set_border_width (GTK_CONTAINER (update_item), 10);
   gtk_window_set_position (GTK_WINDOW (update_item), GTK_WIN_POS_CENTER);
 
-  // add entries for the new item
+  // get the item from the database based on the id
+  connection C(lchr);
+  work W(C);
+  result R = W.exec("SELECT * FROM inventory WHERE id = '" + string(id.c_str())+"'");
+  // set the entries to the values of the item
   id_entry = gtk_entry_new();
   name_entry = gtk_entry_new();
   cat_entry = gtk_entry_new();
   description_entry = gtk_entry_new();
   price_entry = gtk_entry_new();
   quantity_entry = gtk_entry_new();
+  gtk_entry_set_text (GTK_ENTRY (id_entry), id.c_str());
+  gtk_entry_set_text (GTK_ENTRY (name_entry), R[0]["name"].c_str());
+  gtk_entry_set_text (GTK_ENTRY (cat_entry), R[0]["category"].c_str());
+  gtk_entry_set_text (GTK_ENTRY (description_entry), R[0]["description"].c_str());
+  gtk_entry_set_text (GTK_ENTRY (price_entry), R[0]["price"].c_str());
+  gtk_entry_set_text (GTK_ENTRY (quantity_entry), R[0]["quantity"].c_str());
 
-  gtk_entry_set_text (GTK_ENTRY (id_entry), id);
-  gtk_entry_set_text (GTK_ENTRY (name_entry), name);
-  gtk_entry_set_text (GTK_ENTRY (cat_entry), cat);
-  gtk_entry_set_text (GTK_ENTRY (description_entry), description);
-  gtk_entry_set_text (GTK_ENTRY (price_entry), price);
-  gtk_entry_set_text (GTK_ENTRY (quantity_entry), quantity);
   // make a grid to hold the entries  
   GtkWidget *grid = gtk_grid_new ();
   gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
@@ -298,73 +380,71 @@ on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *c
   g_object_unref (provider);
   // connect the signals to the buttons
   gtk_widget_show_all (update_item);
+}
+
+// get the currently selected row
+static void
+on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data)
+{
+  GtkTreeModel *model;
+  GtkTreeIter iter;
+  model = gtk_tree_view_get_model (treeview);
+  gtk_tree_model_get_iter (model, &iter, path);
+  gtk_tree_model_get (model, &iter,COL_ID, &id, COL_NAME, &name, COL_CAT, &cat, COL_DESCRIPTION, &description, COL_PRICE, &price, COL_QUANTITY, &quantity, -1);
+  update(string(id.c_str()));
+  // make a new window that shows details about the item and allow the user to edit it or delete it
+}
+
+static void
+search_item (void) {
+  // search the database for the item
+  // get the id from the search box
+
+  id = string(gtk_entry_get_text(GTK_ENTRY(search_box)));
+  // clear the search box
+  gtk_entry_set_text (GTK_ENTRY (search_box), "");
+
+  // check if the id is in the database
+  connection C(lchr);
+  work W(C);
+  string query = "select * from inventory where id = '";
+  query += id + "'";
+  result R( W.exec(query));
+  // if the id is in the database, display the item
+  if (R.size() > 0) {
+    // open the update item window
+    update(id);
+
+
+  } else {
+    add_item();
+  }
+  // print the results
 
 }
-// search for an item by id
-// static void
-// search_item (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data, GtkEntry *entry) {
-//   // get the text from the entry 
-//   const gchar *text = gtk_entry_get_text (search_box);
-//   printf("HI");
-//   // find the item in the list and highlight it
-//   GtkTreeModel *model;
-//   GtkTreeIter iter;
-//   model = gtk_tree_view_get_model (GTK_TREE_VIEW (tree_view));
-//   if (gtk_tree_model_get_iter_first (model, &iter)) {
-//     do {
-//       gchar *id;
-//       gtk_tree_model_get (model, &iter, COL_ID, &id, -1);
-//       if (strcmp (id, text) == 0) {
-//         GtkTreePath *path = gtk_tree_model_get_path (model, &iter);
-//         gtk_tree_view_scroll_to_cell (GTK_TREE_VIEW (tree_view), path, NULL, FALSE, 0, 0);
-//         gtk_tree_selection_select_iter (gtk_tree_view_get_selection (GTK_TREE_VIEW (tree_view)), &iter);
-//         gtk_tree_path_free (path);
-//       }
-//     } while (gtk_tree_model_iter_next (model, &iter));
-//   }
-
-// }
-
-
-
 
 int main(int argc, char* argv[]) {
   try {
     login();
     connection C(lchr);
-    // connect to the database, otherwise throw an error
-    if (C.is_open()) {
-        cout << "Connection Successful, connected to: " << C.dbname() << endl;
-    } else {
-        cout << "Connection Failed" << endl;
-        return 1;
-    }
   } catch (pqxx::sql_error const &e) {
-    // open a window to show the error
-    GtkWidget *error_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title (GTK_WINDOW (error_window), "Error - DataManage");
-    gtk_window_set_default_size (GTK_WINDOW (error_window), 300, 100);
-    gtk_window_set_position (GTK_WINDOW (error_window), GTK_WIN_POS_CENTER);
-    gtk_container_set_border_width (GTK_CONTAINER (error_window), 10);
-    GtkWidget *error_label = gtk_label_new ("Error connecting to the database");
-    gtk_container_add (GTK_CONTAINER (error_window), error_label);
-    gtk_widget_show_all (error_window);
+    // open a dialog box to tell the user that the connection failed
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed");
+    gtk_dialog_run (GTK_DIALOG (dialog));
 
   }
   gtk_init (&argc, &argv);
 
-  GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-  g_signal_connect (window, "destroy", gtk_main_quit, NULL);
+  main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  g_signal_connect (main_window, "destroy", gtk_main_quit, NULL);
 
-  GtkWidget *view = create_view_and_model ();
+  
   // make four buttons along the top edge of the screen 
   GtkWidget *button1 = gtk_button_new_with_label ("Add Item");
-  GtkWidget *button2 = gtk_button_new_with_label ("Sort Items");
-  GtkWidget *button3 = gtk_button_new_with_label ("Update Item");
-  GtkWidget *button4 = gtk_button_new_with_label ("Search Item");
+  GtkWidget *button3 = gtk_button_new_with_label ("Help");
   GtkWidget *button5 = gtk_button_new_with_label ("Exit");
   // add a search box below the buttons
-  GtkWidget *search_box = gtk_entry_new ();
+  search_box = gtk_entry_new ();
   // make the search box say "Type to search"
   GtkWidget *search_label = gtk_label_new ("Type or scan to search ID");
   // make a grid to hold the buttons
@@ -372,9 +452,7 @@ int main(int argc, char* argv[]) {
   grid = gtk_grid_new();
   // add the buttons to the grid
   gtk_grid_attach (GTK_GRID (grid), button1, 0, 0, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), button2, 1, 0, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), button3, 2, 0, 1, 1);
-  gtk_grid_attach (GTK_GRID (grid), button4, 3, 0, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), button3, 3, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), button5, 4, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), search_label, 0, 1, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), search_box, 1, 1, 5, 1);
@@ -384,25 +462,26 @@ int main(int argc, char* argv[]) {
   // make the search bar highlighted by default
   gtk_widget_grab_focus (search_box);
   // when enter is pressed, search for the item
-  // g_signal_connect (search_box, "activate", G_CALLBACK (search_item), &C);
+  g_signal_connect (search_box, "activate", G_CALLBACK (search_item), search_box);
+  
   // add scroll bar to the window
   GtkWidget *scrolled_window = gtk_scrolled_window_new (NULL, NULL);
-  // make the window scrollable
-  
+  GtkWidget *view = create_view_and_model ();
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_container_add (GTK_CONTAINER (scrolled_window), view);
   // make sure that the tree view is the size of the window
-  gtk_widget_set_size_request (scrolled_window, 550, 600);
+  gtk_widget_set_size_request (scrolled_window, 600, 600);
   gtk_grid_attach(GTK_GRID(grid), scrolled_window, 0, 4, 5, 4);
   // get the value of the item that is selected in the tree view
   g_signal_connect (view, "row-activated", G_CALLBACK (on_row_activated), NULL);
 
-  gtk_container_add (GTK_CONTAINER (window), grid);
+
+  gtk_container_add (GTK_CONTAINER (main_window), grid);
   // set smallest window size
-  gtk_window_set_default_size (GTK_WINDOW (window), 300, 300);
-  gtk_window_set_title(GTK_WINDOW(window), "Online - DataManage");
-  gtk_window_set_resizable (GTK_WINDOW (window), FALSE);
-  gtk_widget_show_all (window);
+  gtk_window_set_default_size (GTK_WINDOW (main_window), 300, 300);
+  gtk_window_set_title(GTK_WINDOW(main_window), "Online - DataManage");
+  gtk_window_set_resizable (GTK_WINDOW (main_window), FALSE);
+  gtk_widget_show_all (main_window);
 
   gtk_main ();
 

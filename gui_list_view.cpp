@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string.h>
 
-
+// add all the global variables so that they can be 
 GtkCellRenderer *renderer;
 GtkWidget *search_box;
 GtkWidget *id_entry;
@@ -27,14 +27,13 @@ gchar *description;
 gchar *price;
 gchar *quantity;
 
-// connect to the database
+// use namespaces so i don't have to type std:: or pqxx:: at the start of a command
 using namespace std;
-
 using namespace pqxx;
 
 
 
-
+// these varibles need to be initalised here because they need the std:: namespaces
 string login_string;
 const char* convertchar;
 char *lchr;
@@ -44,6 +43,7 @@ string id;
 
 int i; 
 int login (){
+  // get the login information from the file so that the program can access the database
   ifstream in("data.dmf");
   in >> login_string;
   convertchar = login_string.c_str();
@@ -60,7 +60,10 @@ int login (){
   
   return 0;
 }
+// setup 
 string query_main = "select * from inventory";
+
+// setup the varibles for the tree view
 enum
 {
   COL_ID,

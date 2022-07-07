@@ -466,6 +466,10 @@ int main(int argc, char* argv[]) {
     GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed");
     gtk_dialog_run (GTK_DIALOG (dialog));
 
+  } catch (pqxx::broken_connection) {
+    // open a dialog box to tell the user that the connection failed
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed");
+    gtk_dialog_run (GTK_DIALOG (dialog));
   }
   gtk_init (&argc, &argv);
 

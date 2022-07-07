@@ -1,4 +1,5 @@
 #include <gtk/gtk.h>
+#include <pqxx/pqxx> 
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -6,6 +7,7 @@
 #include <stdbool.h>
 
 using namespace std;
+using namespace pqxx;
 // set up the varibles used to store the users login information
 const char *username;
 const char *password;
@@ -18,6 +20,9 @@ GtkWidget *username_entry;
 GtkWidget *database_entry;
 GtkWidget *ip_entry;
 GtkWidget *port_entry;
+string login_string;
+const char* convertchar;
+char *lchr;
 
 static void
 save_info (GtkWidget *widget,
@@ -31,6 +36,33 @@ save_info (GtkWidget *widget,
   ofstream out("data.dmf");
   out << "dbname=" << database << ",user=" << username << ",password=" << password << ",host=" << ip << ",port=" << port;
   out.close();
+  // check login information is correct
+  ifstream in("data.dmf");
+  in >> login_string;
+  convertchar = login_string.c_str();
+  lchr = strdup(convertchar);
+  // replace all commas with spaces
+  for (int i = 0; i < strlen(lchr); i++) {
+	if (lchr[i] == ',') {
+	  lchr[i] = ' ';
+	}
+  }
+  try{
+    connection C(lchr);
+  } catch (pqxx::sql_error const &e) {
+    // open a dialog box to tell the user that the connection failed
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed, Please Check Your Login Information");
+    gtk_dialog_run (GTK_DIALOG (dialog));
+    g_signal_connect (dialog, "response", G_CALLBACK (gtk_widget_destroy), NULL);
+
+  } catch (pqxx::broken_connection) {
+    // open a dialog box to tell the user that the connection failed
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed, Please Check Your Login Information");
+    // make close button work
+    g_signal_connect (dialog, "response", G_CALLBACK (gtk_widget_destroy), NULL);
+    gtk_dialog_run (GTK_DIALOG (dialog));
+  }
+  
   gtk_main_quit();
   system("./main");
   

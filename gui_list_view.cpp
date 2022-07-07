@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string.h>
 
-// add all the global variables so that they can be 
+// add all the global variables so that they can be used throughout the program
 GtkCellRenderer *renderer;
 GtkWidget *search_box;
 GtkWidget *id_entry;
@@ -60,7 +60,7 @@ int login (){
   
   return 0;
 }
-// setup 
+// setup the connection query
 string query_main = "select * from inventory";
 
 // setup the varibles for the tree view
@@ -130,33 +130,7 @@ create_and_fill_model (void)
 
     return GTK_TREE_MODEL (store);
   } catch (pqxx::undefined_table) {
-    printf("NO TABLE DETECTED");
-    // show error message if the table does not exist and ask the user to create it
-    GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title (GTK_WINDOW (window), "Error");
-    gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
-    gtk_window_set_position (GTK_WINDOW (window), GTK_WIN_POS_CENTER);
-    gtk_container_set_border_width (GTK_CONTAINER (window), 10);
-    GtkWidget *label = gtk_label_new ("Table does not exist. It must be created to use this program");
-    GtkWidget *label2 = gtk_label_new ("Would you like DataManage to create this table for you?");
-    // make a button labeled create and exit
-    GtkWidget *create_button = gtk_button_new_with_label ("Create Table");
-    g_signal_connect (create_button, "clicked", G_CALLBACK (create), NULL);
-
-    GtkWidget *exit_button = gtk_button_new_with_label ("Exit");
-    g_signal_connect (create_button, "clicked", G_CALLBACK (exit), NULL);
-
-    GtkWidget *grid = gtk_grid_new ();
-    gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
-    gtk_grid_set_row_spacing (GTK_GRID (grid), 10);
-    gtk_container_add (GTK_CONTAINER (window), grid);
-
-    gtk_grid_attach (GTK_GRID (grid), label, 0, 1, 1, 1);
-    gtk_grid_attach (GTK_GRID (grid), label2, 0, 2, 1, 1);
-    gtk_grid_attach (GTK_GRID (grid), create_button, 0, 1, 1, 1);
-    gtk_grid_attach (GTK_GRID (grid), exit_button, 0, 1, 1, 1);
-
-
+    create();
   }
   return 0;
 }
@@ -225,6 +199,8 @@ commit_data (void)
                                                 GTK_MESSAGE_ERROR,
                                                 GTK_BUTTONS_CLOSE,
                                                 "%s", e.what());
+    // if the user clicks the close button, destroy the dialog
+    g_signal_connect_swapped (dialog, "response", G_CALLBACK (gtk_widget_destroy), dialog);
     gtk_dialog_run (GTK_DIALOG (dialog));
   }
 }
@@ -263,8 +239,11 @@ update_data (void) {
                                               GTK_DIALOG_DESTROY_WITH_PARENT,
                                               GTK_MESSAGE_ERROR,
                                               GTK_BUTTONS_CLOSE,
-                                              "Duplicated IDs, Make sure that you do not use an ID more than once.\n\n More Info: %s", e.what());
+                                              "%s", e.what());
+    g_signal_connect_swapped (dialog, "response", G_CALLBACK (gtk_widget_destroy), dialog);
     gtk_widget_show (dialog);
+    // if the user clicks the close button, destroy the dialog
+    gtk_dialog_run (GTK_DIALOG (dialog));
     
     }
   gtk_widget_destroy (update_item);
@@ -272,6 +251,48 @@ update_data (void) {
   gtk_widget_grab_focus (search_box);
     
   }
+static void
+search_data (void) {
+  // search for the item in the database and then display it on the store mode
+  connection C(lchr);
+  work W(C);
+  string query = "select * from inventory where id = '" + string(gtk_entry_get_text(GTK_ENTRY(search_box))) + "'";
+  result R = W.exec(query);
+  W.commit();
+  // print the result to the console
+  for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
+    cout << c[0].as<string>() << " " << c[1].as<string>() << " " << c[2].as<string>() << " " << c[3].as<string>() << " " << c[4].as<string>() << " " << c[5].as<string>() << endl;
+  }
+}
+
+static GtkWidget *
+store_mode (void) {
+  // open a new window with a search box 
+  GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_title (GTK_WINDOW (window), "Store Mode");
+  gtk_container_set_border_width (GTK_CONTAINER (window), 10);
+  gtk_window_set_default_size (GTK_WINDOW (window), 500, 500);
+  gtk_window_set_position (GTK_WINDOW (window), GTK_WIN_POS_CENTER);
+  gtk_window_set_resizable (GTK_WINDOW (window), FALSE);
+
+  GtkWidget *search_box = gtk_entry_new ();
+  // make a grid view to hold the search box
+  GtkWidget *grid = gtk_grid_new ();
+  gtk_grid_set_row_spacing (GTK_GRID (grid), 10);
+  gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
+  gtk_container_add (GTK_CONTAINER (window), grid);
+  gtk_grid_attach (GTK_GRID (grid), search_box, 0, 0, 1, 1);
+  gtk_widget_set_hexpand (search_box, TRUE);
+  gtk_widget_grab_focus (search_box);
+  g_signal_connect (search_box, "activate", G_CALLBACK (search_data), window);
+
+  gtk_widget_show_all (window);
+  return window;
+
+
+
+
+}
 
 static GtkWidget * 
 add_item (void) {
@@ -325,6 +346,7 @@ add_item (void) {
 static void
 update (string id) {
   // update the item in the database
+  // 
   update_item = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (update_item), "Item Details");
   gtk_window_set_default_size (GTK_WINDOW (update_item), 200, 200);
@@ -332,10 +354,12 @@ update (string id) {
   gtk_window_set_position (GTK_WINDOW (update_item), GTK_WIN_POS_CENTER);
 
   // get the item from the database based on the id
+  // and save it in the global variables
   connection C(lchr);
   work W(C);
   result R = W.exec("SELECT * FROM inventory WHERE id = '" + string(id.c_str())+"'");
-  // set the entries to the values of the item
+  // set the entries to the values of the item 
+  // so that they can be displayed to the user
   id_entry = gtk_entry_new();
   name_entry = gtk_entry_new();
   cat_entry = gtk_entry_new();
@@ -354,7 +378,7 @@ update (string id) {
   gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
   gtk_grid_set_row_spacing (GTK_GRID (grid), 10);
   gtk_container_add (GTK_CONTAINER (update_item), grid);
-  // add the entries to the grid
+  // add the entries to the grid so that the user can see the item
   gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("ID"), 0, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), id_entry, 1, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), gtk_label_new ("Name"), 0, 1, 1, 1);
@@ -385,7 +409,7 @@ update (string id) {
   gtk_widget_show_all (update_item);
 }
 
-// get the currently selected row
+// get the currently selected row that the user has selected 
 static void
 on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data)
 {
@@ -404,7 +428,7 @@ search_item (void) {
   // get the id from the search box
 
   id = string(gtk_entry_get_text(GTK_ENTRY(search_box)));
-  // clear the search box
+  // clear the search box so that the user can search for another item
   gtk_entry_set_text (GTK_ENTRY (search_box), "");
 
   // check if the id is in the database
@@ -415,15 +439,22 @@ search_item (void) {
   result R( W.exec(query));
   // if the id is in the database, display the item
   if (R.size() > 0) {
-    // open the update item window
+    // open the update item window with the item selected
     update(id);
 
 
   } else {
     add_item();
   }
-  // print the results
 
+
+}
+// make the help window
+static void
+help (void) {
+  // open a html file in the web browser
+  system("xdg-open help.html");  
+  
 }
 
 int main(int argc, char* argv[]) {
@@ -444,6 +475,7 @@ int main(int argc, char* argv[]) {
   
   // make four buttons along the top edge of the screen 
   GtkWidget *button1 = gtk_button_new_with_label ("Add Item");
+  GtkWidget *button2 = gtk_button_new_with_label ("Store mode");
   GtkWidget *button3 = gtk_button_new_with_label ("Help");
   GtkWidget *button5 = gtk_button_new_with_label ("Exit");
   // add a search box below the buttons
@@ -455,11 +487,12 @@ int main(int argc, char* argv[]) {
   grid = gtk_grid_new();
   // add the buttons to the grid
   gtk_grid_attach (GTK_GRID (grid), button1, 0, 0, 1, 1);
+  gtk_grid_attach (GTK_GRID (grid), button2, 1, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), button3, 3, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), button5, 4, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), search_label, 0, 1, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), search_box, 1, 1, 5, 1);
-
+  g_signal_connect(button2, "clicked", G_CALLBACK(store_mode), NULL);
   g_signal_connect(button1, "clicked", G_CALLBACK(add_item), NULL);
   g_signal_connect(button5, "clicked", G_CALLBACK(exit), NULL);
   // make the search bar highlighted by default
@@ -473,7 +506,7 @@ int main(int argc, char* argv[]) {
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_container_add (GTK_CONTAINER (scrolled_window), view);
   // make sure that the tree view is the size of the window
-  gtk_widget_set_size_request (scrolled_window, 600, 600);
+  gtk_widget_set_size_request (scrolled_window, 750, 600);
   gtk_grid_attach(GTK_GRID(grid), scrolled_window, 0, 4, 5, 4);
   // get the value of the item that is selected in the tree view
   g_signal_connect (view, "row-activated", G_CALLBACK (on_row_activated), NULL);

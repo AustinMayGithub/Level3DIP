@@ -34,7 +34,8 @@ save_info (GtkWidget *widget,
   ip = gtk_entry_get_text(GTK_ENTRY(ip_entry));
   port = gtk_entry_get_text(GTK_ENTRY(port_entry));
   ofstream out("data.dmf");
-  out << "dbname=" << database << ",user=" << username << ",password=" << password << ",host=" << ip << ",port=" << port;
+  out << "dbname=" << database << ",user=" << username << 
+  ",password=" << password << ",host=" << ip << ",port=" << port;
   out.close();
   // check login information is correct
   ifstream in("data.dmf");
@@ -51,15 +52,21 @@ save_info (GtkWidget *widget,
     connection C(lchr);
   } catch (pqxx::sql_error const &e) {
     // open a dialog box to tell the user that the connection failed
-    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed, Please Check Your Login Information");
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, 
+      GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+      "Connection Failed, Please Check Your Login Information");
     gtk_dialog_run (GTK_DIALOG (dialog));
-    g_signal_connect (dialog, "response", G_CALLBACK (gtk_widget_destroy), NULL);
+    g_signal_connect (dialog, "response", 
+      G_CALLBACK (gtk_widget_destroy), NULL);
 
   } catch (pqxx::broken_connection) {
     // open a dialog box to tell the user that the connection failed
-    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed, Please Check Your Login Information");
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, 
+      GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, 
+      "Connection Failed, Please Check Your Login Information");
     // make close button work
-    g_signal_connect (dialog, "response", G_CALLBACK (gtk_widget_destroy), NULL);
+    g_signal_connect (dialog, "response", 
+      G_CALLBACK (gtk_widget_destroy), NULL);
     gtk_dialog_run (GTK_DIALOG (dialog));
   }
   
@@ -96,7 +103,8 @@ activate (GtkApplication *app,
   gtk_widget_show(grid);
   GtkWidget *label;
   label = gtk_label_new(NULL);
-  gtk_label_set_markup(GTK_LABEL(label), "<span font_desc=\"18.0\"><i><b>Welcome to DataManage!</b></i></span>");
+  gtk_label_set_markup(GTK_LABEL(label),
+   "<span font_desc=\"18.0\"><i><b>Welcome to DataManage!</b></i></span>");
   gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 2, 1);
   label = gtk_label_new(NULL);
   

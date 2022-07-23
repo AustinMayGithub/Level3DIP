@@ -6,6 +6,7 @@
 #include <string.h>
 
 // add all the global variables so that they can be used throughout the program
+// and no these are required as i can't refrence a varible inside of a function
 GtkCellRenderer *renderer;
 GtkWidget *search_box;
 GtkWidget *id_entry;
@@ -27,13 +28,13 @@ gchar *description;
 gchar *price;
 gchar *quantity;
 
-// use namespaces so i don't have to type std:: or pqxx:: at the start of a command
+// use namespaces so i don't have to type std:: or pqxx::
+// at the start of a command
 using namespace std;
 using namespace pqxx;
 
-
-
-// these varibles need to be initalised here because they need the std:: namespaces
+// these varibles need to be initalised here because 
+// they need the std:: namespaces
 string login_string;
 const char* convertchar;
 char *lchr;
@@ -41,19 +42,21 @@ string category_filter;
 string id;
 
 
-int i; 
+
 int login (){
-  // get the login information from the file so that the program can access the database
+  // get the login information from the file so that
+  // the program can access the database
   ifstream in("data.dmf");
   in >> login_string;
   convertchar = login_string.c_str();
   lchr = strdup(convertchar);
   category_filter = "*";
   // replace all commas with spaces
-  for (int i = 0; i < strlen(lchr); i++) {
-	if (lchr[i] == ',') {
-	  lchr[i] = ' ';
-	}
+  int i; // counter
+  for (int i = 0; i < strlen(lchr); i++) { 
+    if (lchr[i] == ',') {
+      lchr[i] = ' ';
+    }
   }
 
   connection C(lchr);
@@ -95,7 +98,8 @@ create (void) {
   connection C(lchr);
   work W(C);
 
-  string query = "create table inventory (id text primary key, name text, category text, description text, price decimal, quantity int);";
+  string query = "create table inventory (id text primary key, name text, " 
+  "category text, description text, price decimal, quantity int);";
   W.exec(query);
   W.commit();
 
@@ -147,17 +151,23 @@ create_view_and_model (void)
   // populate the cells with the column data
   
   renderer = gtk_cell_renderer_text_new ();
-  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "ID",  renderer, "text", COL_ID,NULL);
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "ID",
+    renderer, "text", COL_ID,NULL);
   renderer = gtk_cell_renderer_text_new ();
-  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Name",  renderer, "text", COL_NAME,NULL);
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Name",
+    renderer, "text", COL_NAME,NULL);
   renderer = gtk_cell_renderer_text_new ();
-  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Category",  renderer, "text", COL_CAT,NULL);
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, 
+    "Category",  renderer, "text", COL_CAT,NULL);
   renderer = gtk_cell_renderer_text_new ();
-  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Description",  renderer, "text", COL_DESCRIPTION,NULL);
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, 
+    "Description",  renderer, "text", COL_DESCRIPTION,NULL);
   renderer = gtk_cell_renderer_text_new ();
-  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Price",  renderer, "text", COL_PRICE,NULL);
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, 
+    "Price",  renderer, "text", COL_PRICE,NULL);
   renderer = gtk_cell_renderer_text_new ();
-  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, "Quantity",  renderer, "text", COL_QUANTITY,NULL);
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view), -1, 
+    "Quantity",  renderer, "text", COL_QUANTITY,NULL);
 
   // load the database data into the tree view
   // clear the tree view first
@@ -180,7 +190,13 @@ commit_data (void)
   try {
     connection C(lchr);
     work W(C); 
-    string query = "insert into inventory values ('"+ string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', " + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", " + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) +")";
+    string query = "insert into inventory values ('"+
+     string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "', '" + 
+     string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', '" + 
+     string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', '" + 
+     string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', " + 
+     string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", " + 
+     string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) +")";
     W.exec(query);
     W.commit();
     id = "";
@@ -200,7 +216,8 @@ commit_data (void)
                                                 GTK_BUTTONS_CLOSE,
                                                 "%s", e.what());
     // if the user clicks the close button, destroy the dialog
-    g_signal_connect_swapped (dialog, "response", G_CALLBACK (gtk_widget_destroy), dialog);
+    g_signal_connect_swapped (dialog, "response",
+     G_CALLBACK (gtk_widget_destroy), dialog);
     gtk_dialog_run (GTK_DIALOG (dialog));
   }
 }
@@ -210,7 +227,8 @@ delete_data (void) {
   // remove the selected item from the database
   connection C(lchr);
   work W(C);
-  string query = "delete from inventory where id = '" + string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "'";
+  string query = "delete from inventory where id = '" + 
+    string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "'";
   W.exec(query);
   W.commit();
   // destroy the window
@@ -230,7 +248,15 @@ update_data (void) {
   // check if id is in the database
   try {
     printf("%s\n", id.c_str());
-    string query = "update inventory set id = '" + string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + "', name = '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) + "', category = '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + "', description = '" + string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', price = " + string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", quantity = " + string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) + " where id = '" + id.c_str() + "'";
+    string query = "update inventory set id = '" + 
+      string(gtk_entry_get_text(GTK_ENTRY(id_entry))) + 
+      "', name = '" + string(gtk_entry_get_text(GTK_ENTRY(name_entry))) +
+      "', category = '" + string(gtk_entry_get_text(GTK_ENTRY(cat_entry))) + 
+      "', description = '" + 
+      string(gtk_entry_get_text(GTK_ENTRY(description_entry))) + "', price = " +
+      string(gtk_entry_get_text(GTK_ENTRY(price_entry))) + ", quantity = " + 
+      string(gtk_entry_get_text(GTK_ENTRY(quantity_entry))) + " where id = '" + 
+      id.c_str() + "'";
     printf("%s\n", query.c_str());
     W.exec(query);
     W.commit();
@@ -240,7 +266,8 @@ update_data (void) {
                                               GTK_MESSAGE_ERROR,
                                               GTK_BUTTONS_CLOSE,
                                               "%s", e.what());
-    g_signal_connect_swapped (dialog, "response", G_CALLBACK (gtk_widget_destroy), dialog);
+    g_signal_connect_swapped (dialog, "response",
+     G_CALLBACK (gtk_widget_destroy), dialog);
     gtk_widget_show (dialog);
     // if the user clicks the close button, destroy the dialog
     gtk_dialog_run (GTK_DIALOG (dialog));
@@ -256,12 +283,15 @@ search_data (void) {
   // search for the item in the database and then display it on the store mode
   connection C(lchr);
   work W(C);
-  string query = "select * from inventory where id = '" + string(gtk_entry_get_text(GTK_ENTRY(search_box))) + "'";
+  string query = "select * from inventory where id = '" + 
+    string(gtk_entry_get_text(GTK_ENTRY(search_box))) + "'";
   result R = W.exec(query);
   W.commit();
   // print the result to the console
   for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-    cout << c[0].as<string>() << " " << c[1].as<string>() << " " << c[2].as<string>() << " " << c[3].as<string>() << " " << c[4].as<string>() << " " << c[5].as<string>() << endl;
+    cout << c[0].as<string>() << " " << c[1].as<string>() << " " <<
+     c[2].as<string>() << " " << c[3].as<string>() << " " <<
+     c[4].as<string>() << " " << c[5].as<string>() << endl;
   }
 }
 
@@ -357,7 +387,8 @@ update (string id) {
   // and save it in the global variables
   connection C(lchr);
   work W(C);
-  result R = W.exec("SELECT * FROM inventory WHERE id = '" + string(id.c_str())+"'");
+  result R = W.exec("SELECT * FROM inventory WHERE id = '" +
+    string(id.c_str())+"'");
   // set the entries to the values of the item 
   // so that they can be displayed to the user
   id_entry = gtk_entry_new();
@@ -400,7 +431,8 @@ update (string id) {
   // make the delete button colored red using the style provider
   GtkCssProvider *provider = gtk_css_provider_new ();
   gtk_css_provider_load_from_data (provider, "* { color: red; }", -1, NULL);
-  gtk_style_context_add_provider (gtk_widget_get_style_context (delete_button), GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+  gtk_style_context_add_provider (gtk_widget_get_style_context (delete_button),
+    GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
   gtk_grid_attach (GTK_GRID (grid), delete_button, 1, 7, 1, 1);
   g_signal_connect (delete_button, "clicked", G_CALLBACK (delete_data), NULL);
   // unreference the provider
@@ -411,15 +443,19 @@ update (string id) {
 
 // get the currently selected row that the user has selected 
 static void
-on_row_activated (GtkTreeView *treeview, GtkTreePath *path, GtkTreeViewColumn *column, gpointer data)
+on_row_activated (GtkTreeView *treeview, GtkTreePath *path,
+ GtkTreeViewColumn *column, gpointer data)
 {
   GtkTreeModel *model;
   GtkTreeIter iter;
   model = gtk_tree_view_get_model (treeview);
   gtk_tree_model_get_iter (model, &iter, path);
-  gtk_tree_model_get (model, &iter,COL_ID, &id, COL_NAME, &name, COL_CAT, &cat, COL_DESCRIPTION, &description, COL_PRICE, &price, COL_QUANTITY, &quantity, -1);
+  gtk_tree_model_get (model, &iter,COL_ID, &id, COL_NAME, &name, COL_CAT, &cat,
+    COL_DESCRIPTION, &description, COL_PRICE, &price,
+    COL_QUANTITY, &quantity, -1);
   update(string(id.c_str()));
-  // make a new window that shows details about the item and allow the user to edit it or delete it
+  // make a new window that shows details about the item and
+  // allow the user to edit it or delete it
 }
 
 static void
@@ -463,12 +499,16 @@ int main(int argc, char* argv[]) {
     connection C(lchr);
   } catch (pqxx::sql_error const &e) {
     // open a dialog box to tell the user that the connection failed
-    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed");
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, 
+    GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+     "Connection Failed");
     gtk_dialog_run (GTK_DIALOG (dialog));
 
   } catch (pqxx::broken_connection) {
     // open a dialog box to tell the user that the connection failed
-    GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "Connection Failed");
+    GtkWidget *dialog = gtk_message_dialog_new (NULL, 
+    GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+     "Connection Failed");
     gtk_dialog_run (GTK_DIALOG (dialog));
   }
   gtk_init (&argc, &argv);
@@ -502,12 +542,14 @@ int main(int argc, char* argv[]) {
   // make the search bar highlighted by default
   gtk_widget_grab_focus (search_box);
   // when enter is pressed, search for the item
-  g_signal_connect (search_box, "activate", G_CALLBACK (search_item), search_box);
+  g_signal_connect (search_box, "activate", G_CALLBACK (search_item),
+   search_box);
   
   // add scroll bar to the window
   GtkWidget *scrolled_window = gtk_scrolled_window_new (NULL, NULL);
   GtkWidget *view = create_view_and_model ();
-  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window),
+   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_container_add (GTK_CONTAINER (scrolled_window), view);
   // make sure that the tree view is the size of the window
   gtk_widget_set_size_request (scrolled_window, 750, 600);

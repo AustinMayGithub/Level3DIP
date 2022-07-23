@@ -301,34 +301,7 @@ search_data (void) {
   }
 }
 
-static GtkWidget *
-store_mode (void) {
-  // open a new window with a search box 
-  GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title (GTK_WINDOW (window), "Store Mode");
-  gtk_container_set_border_width (GTK_CONTAINER (window), 10);
-  gtk_window_set_default_size (GTK_WINDOW (window), 500, 500);
-  gtk_window_set_position (GTK_WINDOW (window), GTK_WIN_POS_CENTER);
-  gtk_window_set_resizable (GTK_WINDOW (window), FALSE);
 
-  GtkWidget *search_box = gtk_entry_new ();
-  // make a grid view to hold the search box
-  GtkWidget *grid = gtk_grid_new ();
-  gtk_grid_set_row_spacing (GTK_GRID (grid), 10);
-  gtk_grid_set_column_spacing (GTK_GRID (grid), 10);
-  gtk_container_add (GTK_CONTAINER (window), grid);
-  gtk_grid_attach (GTK_GRID (grid), search_box, 0, 0, 1, 1);
-  gtk_widget_set_hexpand (search_box, TRUE);
-  gtk_widget_grab_focus (search_box);
-  g_signal_connect (search_box, "activate", G_CALLBACK (search_data), window);
-
-  gtk_widget_show_all (window);
-  return window;
-
-
-
-
-}
 
 static GtkWidget * 
 add_item (void) {
@@ -549,7 +522,6 @@ int main(int argc, char* argv[]) {
   gtk_grid_attach (GTK_GRID (grid), button5, 4, 0, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), search_label, 0, 1, 1, 1);
   gtk_grid_attach (GTK_GRID (grid), search_box, 1, 1, 5, 1);
-  g_signal_connect(button2, "clicked", G_CALLBACK(store_mode), NULL);
   g_signal_connect(button1, "clicked", G_CALLBACK(add_item), NULL);
   g_signal_connect(button3, "clicked", G_CALLBACK(refresh), NULL);
   g_signal_connect(button5, "clicked", G_CALLBACK(exit), NULL);

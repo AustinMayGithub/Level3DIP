@@ -71,7 +71,7 @@ save_info (GtkWidget *widget,
   }
   
   gtk_main_quit();
-  system("./main");
+  system("main.exe & exit");
   
 }
 
@@ -81,7 +81,7 @@ login (GtkWidget *widget,
 {
   
   gtk_main_quit();
-  system("./main");
+  system("main.exe & exit");
 }
 
 static void

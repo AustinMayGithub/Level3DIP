@@ -1,3 +1,5 @@
+// compile with g++ login.cpp -o login -lpq -lpqxx `pkg-config --libs gtk+-3.0` `pkg-config --cflags gtk+-3.0`
+
 #include <gtk/gtk.h>
 #include <pqxx/pqxx> 
 #include <iostream>
@@ -71,7 +73,7 @@ save_info (GtkWidget *widget,
   }
   
   gtk_main_quit();
-  system("main.exe & exit");
+  system("./main & exit");
   
 }
 
@@ -81,7 +83,7 @@ login (GtkWidget *widget,
 {
   
   gtk_main_quit();
-  system("main.exe & exit");
+  system("./main & exit");
 }
 
 static void

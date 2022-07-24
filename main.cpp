@@ -181,8 +181,7 @@ create_view_and_model (void)
   g_object_unref (model);
 
   return view;
-
-
+  
 }
 
 static void
@@ -284,22 +283,6 @@ update_data (void) {
   gtk_widget_grab_focus (search_box);
     
   }
-static void
-search_data (void) {
-  // search for the item in the database and then display it on the store mode
-  connection C(lchr);
-  work W(C);
-  string query = "select * from inventory where id = '" + 
-    string(gtk_entry_get_text(GTK_ENTRY(search_box))) + "'";
-  result R = W.exec(query);
-  W.commit();
-  // print the result to the console
-  for (result::const_iterator c = R.begin(); c != R.end(); ++c) {
-    cout << c[0].as<string>() << " " << c[1].as<string>() << " " <<
-     c[2].as<string>() << " " << c[3].as<string>() << " " <<
-     c[4].as<string>() << " " << c[5].as<string>() << endl;
-  }
-}
 
 
 
